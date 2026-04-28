@@ -1753,16 +1753,8 @@ void PageFaultHandler::SignalHandler(int sig, siginfo_t* info, void* ctx)
         }
         SafeWriteStr("\n");
         
-        // Try to read VTLB vmap entry for the faulted page (if valid PS2 address)
-        if (is_fastmem_fault && ps2_vaddr < 0x100000000ULL) {
-            // Include external vtlb access - vmap lookup to diagnose handler vs pointer
-            extern struct vtlb_private::Data vtlbdata;  // Extern lookup (may fail if vtlbdata is private)
-            SafeWriteStr("@@VTLB_VMAP_PROBE@@");
-            write_hex_val(" ps2_vaddr=0x", ps2_vaddr);
-            // Cannot safely read vtlbdata from signal handler without causing deadlock
-            // Just document that PS2 vaddr was computed
-            SafeWriteStr(" vmap_lookup_skipped=1\n");
-        }
+        // Note: VTLB vmap lookup skipped to avoid vtlbdata namespace access and potential deadlocks.
+        // PS2 virtual address is already computed and printed above for diagnosis.
         
         if (detailed_jit_dump) {
             // Detailed diagnostics: fault address, EE PC, EE instruction
