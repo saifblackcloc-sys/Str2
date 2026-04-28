@@ -1714,7 +1714,55 @@ void PageFaultHandler::SignalHandler(int sig, siginfo_t* info, void* ctx)
         uintptr_t rstate_cpu = ss->__x[27];
         u32 ee_pc = 0, ee_instr = 0;
         bool ee_pc_read = (rstate_cpu > 0x1000) && SafeRead32(rstate_cpu + 0x2A8, &ee_pc);
-        // bool ee_instr_read = ee_pc_read && SafeRead32(ee_pc, &ee_instr); // Unused
+        bool ee_instr_read = ee_pc_read && SafeRead32(ee_pc, &ee_instr);
+        
+        // Enhanced JIT Crash Diagnostics
+        uintptr_t jbase = s_jit_base.load(std::memory_order_relaxed);
+        uintptr_t jend = s_jit_end.load(std::memory_order_relaxed);
+        uintptr_t fastmem_base = reg_x25;  // RFASTMEMBASE in ARM64 x25
+        
+        // Compute PS2 virtual address from fault address
+        uintptr_t ps2_vaddr = 0;
+        bool is_fastmem_fault = false;
+        if (fastmem_base > 0 && fault_val >= fastmem_base) {
+            ps2_vaddr = fault_val - fastmem_base;
+            is_fastmem_fault = true;
+        }
+        
+        // Print basic JIT info and fault details
+        SafeWriteStr("@@JIT_FAULT_DETAIL@@");
+        write_hex_val(" fault_addr=0x", fault_val);
+        write_hex_val(" jbase=0x", jbase);
+        write_hex_val(" jend=0x", jend);
+        SafeWriteStr(" in_jit=");
+        SafeWriteStr((pc_val >= jbase && pc_val < jend) ? "1" : "0");
+        SafeWriteStr(" fastmem_base=0x");
+        write_hex_val("", fastmem_base);
+        SafeWriteStr(" is_fastmem_fault=");
+        SafeWriteStr(is_fastmem_fault ? "1" : "0");
+        SafeWriteStr("\n");
+        
+        // Print EE context and PS2 vaddr
+        SafeWriteStr("@@EE_CONTEXT@@");
+        write_hex_val(" eepc=0x", (uintptr_t)ee_pc);
+        write_hex_val(" eeinstr=0x", (uintptr_t)ee_instr);
+        SafeWriteStr(" instr_read=");
+        SafeWriteStr(ee_instr_read ? "1" : "0");
+        if (is_fastmem_fault) {
+            write_hex_val(" ps2_vaddr=0x", ps2_vaddr);
+        }
+        SafeWriteStr("\n");
+        
+        // Try to read VTLB vmap entry for the faulted page (if valid PS2 address)
+        if (is_fastmem_fault && ps2_vaddr < 0x100000000ULL) {
+            // Include external vtlb access - vmap lookup to diagnose handler vs pointer
+            extern struct vtlb_private::Data vtlbdata;  // Extern lookup (may fail if vtlbdata is private)
+            SafeWriteStr("@@VTLB_VMAP_PROBE@@");
+            write_hex_val(" ps2_vaddr=0x", ps2_vaddr);
+            // Cannot safely read vtlbdata from signal handler without causing deadlock
+            // Just document that PS2 vaddr was computed
+            SafeWriteStr(" vmap_lookup_skipped=1\n");
+        }
         
         if (detailed_jit_dump) {
             // Detailed diagnostics: fault address, EE PC, EE instruction

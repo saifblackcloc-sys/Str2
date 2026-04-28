@@ -2061,26 +2061,13 @@ void vtlb_ResetFastmem()
 		if (vtlb_GetMainMemoryOffsetFromPtr(vm.assumePtr(vaddr), &mainmem_offset, &mainmem_size, &prot))
 			vtlb_CreateFastmemMapping(vaddr, mainmem_offset, prot);
 	}
-}
 
-// Reserves the vtlb core allocation used by various emulation components!
-// [TODO] basemem - request allocating memory at the specified virtual location, which can allow
-//    for easier debugging and/or 3rd party cheat programs.  If 0, the operating system
-//    default is used.
-bool vtlb_Core_Alloc()
-{
-	static constexpr size_t VMAP_SIZE = sizeof(VTLBVirtual) * VTLB_VMAP_ITEMS;
-	static_assert(HostMemoryMap::VTLBVirtualMapSize == VMAP_SIZE);
-
-	pxAssert(!vtlbdata.vmap && !vtlbdata.fastmem_base && !s_fastmem_area);
-
-	vtlbdata.vmap = reinterpret_cast<VTLBVirtual*>(SysMemory::GetVTLBVirtualMap());
-
-	pxAssert(!s_fastmem_area);
-	s_fastmem_area = SharedMemoryMappingArea::Create(FASTMEM_AREA_SIZE);
-	if (!s_fastmem_area)
-	{
-		// [P49] Non-fatal on iOS real device: fastmem is force-disabled anyway.
+    // Ensure PS2 register space always stays handler-mapped and never becomes fastmem.
+    for (u32 vaddr = 0x10000000u; vaddr < 0x14000000u; vaddr += VTLB_PAGE_SIZE)
+    {
+        const u32 page = vaddr >> VTLB_PAGE_BITS;
+        vtlbdata.vmap[page] = VTLBVirtual(vtlbdata.pmap[page], vaddr, vaddr);
+    }
 		// 4GB virtual reservation can fail on devices with limited VA space (e.g. iPhone SE 2).
 #if TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR
 		Console.Warning("@@FASTMEM_SKIP@@ 4GB fastmem area allocation failed — continuing without fastmem");
