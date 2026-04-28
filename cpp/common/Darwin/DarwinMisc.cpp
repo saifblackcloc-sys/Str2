@@ -1260,6 +1260,8 @@ int DarwinMisc::iPSX2_FORCE_JIT_VERIFY = [](){
     const bool diag_enabled = (gate && gate[0] == '1' && gate[1] == '\0');
     const char* s = getenv("iPSX2_FORCE_JIT_VERIFY");
     int val = (diag_enabled && s && s[0] == '1') ? 1 : 0;
+    // Force JIT verification on for diagnostic testing of EE JIT wait-loop translation.
+    val = 1;
     fprintf(stderr, "@@CFG@@ iPSX2_FORCE_JIT_VERIFY=%d\n", val);
     return val;
 }();

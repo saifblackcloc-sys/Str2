@@ -3000,18 +3000,12 @@ static void iBranchTest(u32 newpc)
 		s_probe_ibranch_41048_cfg_logged = true;
 		s_probe_ibranch_41048_enabled = iPSX2_GetRuntimeEnvBool("iPSX2_PROBE_IBRANCH_41048", false);
 		s_disable_waitloop_41048_enabled = iPSX2_GetRuntimeEnvBool("iPSX2_EE41048_DISABLE_WAITLOOP", false);
-		s_disable_waitloop_all = iPSX2_GetRuntimeEnvBool("iPSX2_DISABLE_WAITLOOP", false);
+		s_disable_waitloop_all = true; // Force waitloop optimization off for black-screen diagnostics.
 		Console.WriteLn("@@CFG@@ iPSX2_DISABLE_WAITLOOP=%d", s_disable_waitloop_all ? 1 : 0);
 		Console.WriteLn("@@CFG@@ iPSX2_PROBE_IBRANCH_41048=%d iPSX2_EE41048_DISABLE_WAITLOOP=%d",
 			s_probe_ibranch_41048_enabled ? 1 : 0, s_disable_waitloop_41048_enabled ? 1 : 0);
 	}
 
-	// Check the Event scheduler if our "cycle target" has been reached.
-	// Equiv code to:
-	//    cpuRegs.cycle += blockcycles;
-	//    if ( cpuRegs.cycle > g_nextEventCycle ) { DoEvents(); }
-
-	// [iter660_probe] @@IBRANCH_81FC0@@ probe: log WaitLoop path for OSDSYS idle loop
 	// Removal condition: vsync>45 停止causeafter identified
 	if (newpc == 0x00081FC0u || newpc == 0x00200DD8u) {
 		static int s_ibranch_81fc0_n = 0;
