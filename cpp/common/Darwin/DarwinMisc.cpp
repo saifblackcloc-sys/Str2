@@ -1961,6 +1961,8 @@ void PageFaultHandler::SignalHandler(int sig, siginfo_t* info, void* ctx)
 			}
 		}
 
+#endif
+
 		if (sig == SIGILL) {
 			SafeWriteStr("ESR Class:  Illegal Instruction (SIGILL)\n");
 			// Dump the instruction at fault PC for analysis
