@@ -2219,3 +2219,4 @@ volatile DarwinMisc::WXTraceEvent DarwinMisc::g_wx_events[16] = {};
 volatile u32 DarwinMisc::g_wx_idx = 0;
 volatile DarwinMisc::EmitEvent DarwinMisc::g_emit_events[32] = {};
 volatile u32 DarwinMisc::g_emit_idx = 0;
+
