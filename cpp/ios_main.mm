@@ -18,6 +18,7 @@
 // ... other includes ...
 #include <unistd.h>
 #include <cstdlib>
+#include <cstdio>
 #include <string>
 #include <iostream>
 
@@ -1389,21 +1390,30 @@ INISettingsInterface* g_p44_settings_interface = nullptr;
     EmuFolders::Logs = dataRoot + "/logs";
 
     // --- Unified Logging Setup ---
-    // Set up file logging to Documents/ps2_log.txt
+    // Open ps2_log.txt in append mode and redirect stderr to it
     std::string logPath = dataRoot + "/ps2_log.txt";
     
-    // Set file output level (appends to file)
-    if (!Console.SetFileOutputLevel(LOGLEVEL_DEBUG, logPath)) {
-        // Fall back silently if file cannot be created
+    FILE* logFile = fopen(logPath.c_str(), "a");
+    if (logFile) {
+        // Redirect stderr to the file
+        if (freopen(logPath.c_str(), "a", stderr) == NULL) {
+            // Fallback silently
+        } else {
+            // Disable buffering
+            setvbuf(stderr, NULL, _IONBF, 0);
+            
+            // [iPSX2] Register File Descriptor for Signal Handler
+            DarwinMisc::SetCrashLogFD(fileno(logFile));
+        }
+        fclose(logFile); // freopen has duplicated the fd
     }
+    // If fopen failed, fall back to console-only logging
     
-    // Ensure console output is enabled
-    Console.SetConsoleOutputLevel(LOGLEVEL_DEBUG);
-    
-    // [iPSX2] Register File Descriptor for Signal Handler
-    // Use the Console file handle if available, otherwise fallback
-    if (Console.IsFileOutputEnabled()) {
-        DarwinMisc::SetCrashLogFD(fileno(Console.GetFileLogHandle()));
+    // Redirect stdout to stderr
+    if (dup2(STDERR_FILENO, STDOUT_FILENO) == -1) {
+        // Fallback silently
+    } else {
+        setvbuf(stdout, NULL, _IONBF, 0);
     }
     
     // Log Proof Tag
