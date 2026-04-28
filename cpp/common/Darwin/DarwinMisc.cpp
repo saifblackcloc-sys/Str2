@@ -1709,12 +1709,12 @@ void PageFaultHandler::SignalHandler(int sig, siginfo_t* info, void* ctx)
     const char* jit_dump_env = getenv("iPSX2_JIT_DUMP");
     bool detailed_jit_dump = (jit_dump_env && strcmp(jit_dump_env, "1") == 0);
     
-    if (sig == SIGBUS && (detailed_jit_dump || ee_pc_ok)) {
+    if (sig == SIGBUS) {
         // Get EE PC and instruction
         uintptr_t rstate_cpu = ss->__x[27];
         u32 ee_pc = 0, ee_instr = 0;
         bool ee_pc_read = (rstate_cpu > 0x1000) && SafeRead32(rstate_cpu + 0x2A8, &ee_pc);
-        bool ee_instr_read = ee_pc_read && SafeRead32(ee_pc, &ee_instr);
+        // bool ee_instr_read = ee_pc_read && SafeRead32(ee_pc, &ee_instr); // Unused
         
         if (detailed_jit_dump) {
             // Detailed diagnostics: fault address, EE PC, EE instruction
