@@ -2020,7 +2020,6 @@ void PageFaultHandler::SignalHandler(int sig, siginfo_t* info, void* ctx)
                  SafeWriteStr("\n");
              }
         }
-#endif
         // [iPSX2] Symbolize Crash PC/LR
         {
         // [iPSX2] Symbolize Crash PC/LR (Strict Tags) - MOVED TO TOP
