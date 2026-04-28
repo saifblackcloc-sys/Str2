@@ -191,6 +191,16 @@ void GameDatabase::parseAndInsert(const std::string_view serial, const c4::yml::
 		}
 	}
 
+	if (node.has_child("eeCoreType"))
+	{
+		int coreType = -1;
+		node["eeCoreType"] >> coreType;
+		if (coreType >= 0 && coreType <= 2) // 0=Translator, 1=Interpreter, 2=ARM64 Dynarec
+			gameEntry.eeCoreType = coreType;
+		else
+			Console.Error(fmt::format("GameDB: Invalid EE core type '{}', specified for serial: '{}'.", coreType, serial));
+	}
+
 	// Validate game fixes, invalid ones will be dropped!
 	if (node.has_child("gameFixes") && node["gameFixes"].has_children())
 	{
@@ -536,6 +546,23 @@ void GameDatabaseSchema::GameEntry::applyGameFixes(Pcsx2Config& config, bool app
 		}
 		else
 			Console.Warning("GameDB: Skipping changing VU1 clamp mode [mode=%d]", clampMode);
+	}
+
+	if (eeCoreType.has_value())
+	{
+		if (applyAuto)
+		{
+			const char* coreNames[] = {"Translator", "Interpreter", "ARM64 Dynarec"};
+			const int coreType = eeCoreType.value();
+			Console.WriteLn("GameDB: Changing EE core type to %d [%s]", coreType, coreNames[coreType]);
+			config.Cpu.CoreType = coreType;
+		}
+		else
+		{
+			const int coreType = eeCoreType.value();
+			const char* coreNames[] = {"Translator", "Interpreter", "ARM64 Dynarec"};
+			Console.Warning("GameDB: Skipping changing EE core type to %d [%s]", coreType, coreNames[coreType]);
+		}
 	}
 
 	// TODO - config - this could be simplified with maps instead of bitfields and enums

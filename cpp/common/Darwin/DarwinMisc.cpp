@@ -1704,6 +1704,56 @@ void PageFaultHandler::SignalHandler(int sig, siginfo_t* info, void* ctx)
         SafeWriteStr(ee_pc_ok ? " ok=1\n" : " ok=0\n");
     }
     
+    // [iPSX2] Enhanced JIT Crash Diagnostics
+    // Check for iPSX2_JIT_DUMP environment variable for detailed diagnostics
+    const char* jit_dump_env = getenv("iPSX2_JIT_DUMP");
+    bool detailed_jit_dump = (jit_dump_env && strcmp(jit_dump_env, "1") == 0);
+    
+    if (sig == SIGBUS && (detailed_jit_dump || ee_pc_ok)) {
+        // Get EE PC and instruction
+        uintptr_t rstate_cpu = ss->__x[27];
+        u32 ee_pc = 0, ee_instr = 0;
+        bool ee_pc_read = (rstate_cpu > 0x1000) && SafeRead32(rstate_cpu + 0x2A8, &ee_pc);
+        bool ee_instr_read = ee_pc_read && SafeRead32(ee_pc, &ee_instr);
+        
+        if (detailed_jit_dump) {
+            // Detailed diagnostics: fault address, EE PC, EE instruction
+            SafeWriteStr("@@JIT_CRASH_DETAIL@@");
+            write_hex_val(" fault_addr=0x", fault_val);
+            write_hex_val(" ee_pc=0x", (uintptr_t)ee_pc);
+            write_hex_val(" ee_instr=0x", (uintptr_t)ee_instr);
+            SafeWriteStr("\n");
+            
+            // Host ARM64 instructions: crash site and preceding 3 instructions
+            SafeWriteStr("@@JIT_ARM64_INSNS@@");
+            for (int offset = -12; offset <= 0; offset += 4) {
+                uintptr_t addr = pc_val + offset;
+                u32 arm64_instr = 0;
+                if (SafeRead32(addr, &arm64_instr)) {
+                    if (offset == 0) SafeWriteStr(" [CRASH]");
+                    write_hex_val(" 0x", addr);
+                    SafeWriteStr("=0x");
+                    char instr_buf[9];
+                    const char* h = "0123456789abcdef";
+                    for(int i=0; i<4; ++i) {
+                        instr_buf[2*i] = h[(arm64_instr >> ((3-i)*8 + 4)) & 0xF];
+                        instr_buf[2*i+1] = h[(arm64_instr >> ((3-i)*8)) & 0xF];
+                    }
+                    instr_buf[8] = 0;
+                    SafeWriteStr(instr_buf);
+                }
+            }
+            SafeWriteStr("\n");
+        } else {
+            // Concise diagnostics: fault address, EE PC, raw EE opcode
+            SafeWriteStr("@@JIT_CRASH@@");
+            write_hex_val(" fault=0x", fault_val);
+            write_hex_val(" eepc=0x", (uintptr_t)ee_pc);
+            write_hex_val(" eeop=0x", (uintptr_t)ee_instr);
+            SafeWriteStr("\n");
+        }
+    }
+    
     // Minimal register dumps for debugging content
     // NO dladdr, NO mach_vm_region in this handler to avoid deadlocks.
     

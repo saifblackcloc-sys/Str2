@@ -100,6 +100,7 @@ namespace GameDatabaseSchema
 		ClampMode eeClampMode = ClampMode::Undefined;
 		ClampMode vu0ClampMode = ClampMode::Undefined;
 		ClampMode vu1ClampMode = ClampMode::Undefined;
+		std::optional<s32> eeCoreType;
 		std::vector<GamefixId> gameFixes;
 		std::vector<std::pair<SpeedHack, int>> speedHacks;
 		std::vector<std::pair<GSHWFixId, s32>> gsHWFixes;

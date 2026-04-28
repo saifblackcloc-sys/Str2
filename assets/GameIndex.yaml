@@ -30017,6 +30017,7 @@ SLES-55605:
   name: "Naruto Shippuuden - Ultimate Ninja 5"
   region: "PAL-M5"
   compat: 5
+  eeCoreType: 1 # Force EE Interpreter to fix SIGBUS crash with JIT recompiler.
   clampModes:
     vu0ClampMode: 3 # Fixes bad dialog backgrounds.
     vu1ClampMode: 3 # Fixes SPS on characters.
