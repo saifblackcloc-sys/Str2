@@ -2062,8 +2062,6 @@ void PageFaultHandler::SignalHandler(int sig, siginfo_t* info, void* ctx)
 	}
 	// ---------------------------------------
 
-	} // [P52] end verbose_signal_log block
-
 	// [iter79] @@PRE_MUTEX@@ – probe BEFORE mutex lock, using SafeWriteStr
 	{
 		static u32 s_pm_n = 0;
