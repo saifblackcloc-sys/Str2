@@ -962,8 +962,13 @@ int vtlb_DynGenReadNonQuad_Const(u32 bits, bool sign, bool xmm, u32 addr_const, 
     const bool force_spad_memread =
         (!xmm && (bits == 8 || bits == 16 || bits == 32 || bits == 64) &&
          ((addr_const & 0xF0000000u) == 0x70000000u));
+    // [JIT FIX] Force slow path for PS2 register space (0x10000000-0x14000000) to avoid SIGBUS.
+    // Register space should not use fastmem as it's not mapped in the fastmem region.
+    const bool force_register_space_memread =
+        (!xmm && (bits == 8 || bits == 16 || bits == 32 || bits == 64) &&
+         (addr_const >= 0x10000000u && addr_const < 0x14000000u));
 
-    if (force_kseg1_mmio_memread || force_spad_memread)
+    if (force_kseg1_mmio_memread || force_spad_memread || force_register_space_memread)
     {
         iFlushCall(FLUSH_FULLVTLB);
         armAsm->Mov(EAX, addr_const);
@@ -1817,7 +1822,12 @@ void vtlb_DynGenWrite_Const(u32 bits, bool xmm, u32 addr_const, int value_reg)
              (pc >= 0xBFC00000u && pc < 0xBFC80000u) ||
              (pc >= 0x80000000u && pc < 0x82000000u) ||
              (pc < 0x02000000u));
-        if (force_spad_memwrite || force_bios_write_const)
+        // [JIT FIX] Force slow path for PS2 register space (0x10000000-0x14000000) to avoid SIGBUS.
+        // Register space should not use fastmem as it's not mapped in the fastmem region.
+        const bool force_register_space_memwrite =
+            ((!xmm && (bits == 8 || bits == 16 || bits == 32 || bits == 64)) || (xmm && (bits == 32 || bits == 128))) &&
+            (addr_const >= 0x10000000u && addr_const < 0x14000000u);
+        if (force_spad_memwrite || force_bios_write_const || force_register_space_memwrite)
         {
             iFlushCall(FLUSH_FULLVTLB);
             armAsm->Mov(EAX, addr_const);

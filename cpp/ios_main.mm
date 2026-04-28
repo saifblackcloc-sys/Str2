@@ -1388,30 +1388,26 @@ INISettingsInterface* g_p44_settings_interface = nullptr;
     // ... [Init other folders if needed, but DataRoot is key] ...
     EmuFolders::Logs = dataRoot + "/logs";
 
-    // --- Unified Logging Redirection ---
-    // Force stderr and stdout to pcsx2_log.txt
-    std::string logPath = dataRoot + "/pcsx2_log.txt";
+    // --- Unified Logging Setup ---
+    // Set up file logging to Documents/ps2_log.txt
+    std::string logPath = dataRoot + "/ps2_log.txt";
     
-    // Redirect stderr to file
-    if (freopen(logPath.c_str(), "w", stderr) == NULL) { // "w" clears old logs
-        printf("Reopen stderr failed\n");
+    // Set file output level (appends to file)
+    if (!Console.SetFileOutputLevel(LOGLEVEL_DEBUG, logPath)) {
+        // Fall back silently if file cannot be created
     }
     
-    // Redirect stdout to stderr
-    if (dup2(fileno(stderr), fileno(stdout)) == -1) {
-        fprintf(stderr, "Redirection of stdout failed\n");
-    }
-    
-    // Disable buffering
-    setvbuf(stderr, NULL, _IONBF, 0);
-    setvbuf(stdout, NULL, _IONBF, 0);
+    // Ensure console output is enabled
+    Console.SetConsoleOutputLevel(LOGLEVEL_DEBUG);
     
     // [iPSX2] Register File Descriptor for Signal Handler
-    // We use the raw file descriptor of stderr (which is now our log file)
-    DarwinMisc::SetCrashLogFD(fileno(stderr));
+    // Use the Console file handle if available, otherwise fallback
+    if (Console.IsFileOutputEnabled()) {
+        DarwinMisc::SetCrashLogFD(fileno(Console.GetFileLogHandle()));
+    }
     
     // Log Proof Tag
-    fprintf(stderr, "@@LOG_SINK@@ unified=1 path=%s pid=%d\n", logPath.c_str(), getpid());
+    fprintf(stderr, "@@LOG_FILE@@ path=%s\n", logPath.c_str());
     NSString* bundleID = [[NSBundle mainBundle] bundleIdentifier];
     fprintf(stderr, "@@BUNDLE_ID@@ %s\n", bundleID ? [bundleID UTF8String] : "(null)");
     fprintf(stderr, "@@BUILD_ID@@ %s_%s_%s\n", iPSX2_GIT_HASH, __DATE__, __TIME__);

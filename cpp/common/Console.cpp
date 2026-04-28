@@ -361,7 +361,7 @@ bool Log::SetFileOutputLevel(LOGLEVEL level, std::string path)
 			if (!s_file_handle || s_file_path != path)
 			{
 				s_file_handle.reset();
-				s_file_handle = FileSystem::OpenManagedSharedCFile(path.c_str(), "wb", FileSystem::FileShareMode::DenyWrite);
+				s_file_handle = FileSystem::OpenManagedSharedCFile(path.c_str(), "ab", FileSystem::FileShareMode::DenyWrite);
 				if (s_file_handle)
 				{
 					s_file_path = std::move(path);

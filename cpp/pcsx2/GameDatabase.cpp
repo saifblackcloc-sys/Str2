@@ -15,6 +15,7 @@
 #include "common/StringUtil.h"
 #include "common/Timer.h"
 
+#include <cstdio>
 #include <sstream>
 #include "ryml_std.hpp"
 #include "ryml.hpp"
@@ -554,7 +555,7 @@ void GameDatabaseSchema::GameEntry::applyGameFixes(Pcsx2Config& config, bool app
 		{
 			const char* coreNames[] = {"Translator", "Interpreter", "ARM64 Dynarec"};
 			const int coreType = eeCoreType.value();
-			fprintf(stderr, "GameDB: Setting EE CoreType to %d for %s\n", eeCoreType.value_or(-1), serial);
+			fprintf(stderr, "GameDB: Setting EE CoreType to %d for %s\n", eeCoreType.value_or(-1), name.c_str());
 			Console.WriteLn("GameDB: Changing EE core type to %d [%s]", coreType, coreNames[coreType]);
 			config.Cpu.CoreType = coreType;
 		}
