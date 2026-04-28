@@ -554,6 +554,7 @@ void GameDatabaseSchema::GameEntry::applyGameFixes(Pcsx2Config& config, bool app
 		{
 			const char* coreNames[] = {"Translator", "Interpreter", "ARM64 Dynarec"};
 			const int coreType = eeCoreType.value();
+			fprintf(stderr, "GameDB: Setting EE CoreType to %d for %s\n", eeCoreType.value_or(-1), serial);
 			Console.WriteLn("GameDB: Changing EE core type to %d [%s]", coreType, coreNames[coreType]);
 			config.Cpu.CoreType = coreType;
 		}
