@@ -3026,23 +3026,14 @@ static void iBranchTest(u32 newpc)
 	if (EmuConfig.Speedhacks.WaitLoop && s_nBlockFF && newpc == s_branchTo && !block_waitloop_41048 && !s_disable_waitloop_all)
 	{
         // WaitLoop optimization: advance cycles to nextEventCycle immediately if we are in a wait loop
-        armLoad(EAX, PTR_CPU(cpuRegs.nextEventCycle));
-        
-        // Calculate potential new cycle count
-        armAdd(PTR_CPU(cpuRegs.cycle), scaleblockcycles());
-        
-        // Check if we passed nextEventCycle
-        armLoadsw(EEX, PTR_CPU(cpuRegs.cycle));
+        armLoad(EAX, PTR_CPU(cpuRegs.cycle));
+        armAsm->Add(EAX, EAX, scaleblockcycles());
+
+        // Don't advance past the next pending event.
+        armLoadsw(EEX, PTR_CPU(cpuRegs.nextEventCycle));
         armAsm->Cmp(EAX, EEX);
-        
-        // Use Csel to pick max(cycle, nextEventCycle) - ensure we don't go backwards? 
-        // Actually Android logic is: 
-        // xCMP(eax, ptr32[&cpuRegs.cycle]); // cmp nextEventCycle, cycle
-        // xCMOVS(eax, ptr32[&cpuRegs.cycle]); // if next < cycle (signed), mov cycle to eax. 
-        // So eax becomes max(nextEventCycle, cycle). Wait, if next < cycle, taking cycle ensures we don't rewind.
-        // If next >= cycle, we take next. So we advance TO nextEventCycle.
-        armAsm->Csel(EAX, EEX, EAX, a64::Condition::mi);
-        
+        armAsm->Csel(EAX, EEX, EAX, a64::Condition::pl);
+
         armStore(PTR_CPU(cpuRegs.cycle), EAX);
 
         armEmitJmp(DispatcherEvent);
