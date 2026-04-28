@@ -2074,7 +2074,6 @@ void PageFaultHandler::SignalHandler(int sig, siginfo_t* info, void* ctx)
 			SafeWriteStr(buf);
 			s_pm_n++;
 		}
-	}
 
 	// [iter685] Use try_lock to avoid deadlock in signal handlers.
 	if (!s_exception_handler_mutex.try_lock())
