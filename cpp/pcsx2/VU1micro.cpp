@@ -61,6 +61,13 @@ void vu1ExecMicro(u32 addr)
 
 	g_vu1_kick_count.fetch_add(1, std::memory_order_relaxed); // [TEMP_DIAG]
 
+	// [iPSX2_DIAG] Log VU1 kick with status
+	static int s_vu1_exec_log_n = 0;
+	if (s_vu1_exec_log_n < 50) {
+		Console.WriteLn("@@VU1_EXEC@@ n=%d addr=%08x prev_stat=%08x THREAD_VU1=%d INSTANT_VU1=%d",
+			s_vu1_exec_log_n++, addr, VU0.VI[REG_VPU_STAT].UL, THREAD_VU1 ? 1 : 0, INSTANT_VU1 ? 1 : 0);
+	}
+
 	// [P24] Per-kick drain removed — replaced by VSync-level pacing in Counters.cpp.
 
 	if (THREAD_VU1) {

@@ -27,6 +27,20 @@ vifOp(vifCode_Null);
 
 __ri void vifExecQueue(int idx)
 {
+	// [iPSX2_DIAG] VU1 kick diagnosis after IPU/MPEG cutscene
+	static int s_vif_exec_q_count = 0;
+	const bool blocked_by_status = !!(VU0.VI[REG_VPU_STAT].UL & (1 << (idx * 8)));
+	const bool blocked_by_queue = !GetVifX.queued_program;
+	
+	if (idx == 1 && (blocked_by_status || blocked_by_queue)) {
+		if (s_vif_exec_q_count < 50) {
+			Console.WriteLn("@@VIF_EXEC_Q@@ idx=1 queued=%d status=%08x blocked_status=%d blocked_queue=%d gif_wait=%d",
+				GetVifX.queued_program ? 1 : 0,
+				VU0.VI[REG_VPU_STAT].UL, blocked_by_status ? 1 : 0, blocked_by_queue ? 1 : 0, GetVifX.queued_gif_wait ? 1 : 0);
+			s_vif_exec_q_count++;
+		}
+	}
+
 	if (!GetVifX.queued_program || (VU0.VI[REG_VPU_STAT].UL & 1 << (idx * 8)))
 		return;
 
@@ -40,8 +54,10 @@ __ri void vifExecQueue(int idx)
 
 	if (!idx)
 		vu0ExecMicro(vif0.queued_pc);
-	else
+	else {
+		Console.WriteLn("@@VIF_EXEC_Q_PROCEED@@ Calling vu1ExecMicro(pc=%08x)", vif1.queued_pc);
 		vu1ExecMicro(vif1.queued_pc);
+	}
 
 	// Hack for Wakeboarding Unleashed, game runs a VU program in parallel with a VIF unpack list.
 	// The start of the VU program clears the VU memory, while VIF populates it from behind, so we need to get the clear out of the way.
@@ -78,6 +94,15 @@ uint32_t getVU1ExecCount() { return s_vu1_exec_count.load(); }
 static __fi void vuExecMicro(int idx, u32 addr, bool requires_wait)
 {
 	VIFregisters& vifRegs = vifXRegs;
+	
+	// [iPSX2_DIAG] VIF→VU signal path diagnosis
+	static int s_vu_exec_counts[2] = {0, 0};
+	if (idx == 1 && s_vu_exec_counts[1] < 50) {
+		Console.WriteLn("@@VU_EXEC_MICRO@@ idx=1 addr=%08x waitforvu=%d requires_wait=%d",
+			addr, GetVifX.waitforvu ? 1 : 0, requires_wait ? 1 : 0);
+		s_vu_exec_counts[1]++;
+	}
+	
 	// [TEMP_DIAG] count VIF→VU exec triggers
 	if (idx) s_vu1_exec_count.fetch_add(1, std::memory_order_relaxed);
 	else     s_vu0_exec_count.fetch_add(1, std::memory_order_relaxed);
@@ -126,8 +151,13 @@ static __fi void vuExecMicro(int idx, u32 addr, bool requires_wait)
 
 	GetVifX.queued_gif_wait = requires_wait;
 
-	if (!idx || (!THREAD_VU1 && !INSTANT_VU1))
+	if (!idx || (!THREAD_VU1 && !INSTANT_VU1)) {
+		if (idx == 1) {
+			Console.WriteLn("@@VU_EXEC_MICRO_QUEUE_PROCEED@@ Calling vifExecQueue(1) queued_pc=%08x",
+				GetVifX.queued_pc);
+		}
 		vifExecQueue(idx);
+	}
 }
 
 //------------------------------------------------------------------
